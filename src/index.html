@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>StudentEngagementMonitoring</title>
+
+    <script type="text/javascript">
+
+        let urls = [
+            "http://semproxy.40387376.qpc.hal.davecutting.uk/service",
+            "http://semproxy2.40387376.qpc.hal.davecutting.uk/service",
+            "http://semproxy3.40387376.qpc.hal.davecutting.uk/service",
+        ]
+        let maxminURL = urls;
+        let sortedURL = urls;
+        let totalAttendanceURL = urls;
+        let engagementScoreURL = urls;
+        let riskAssessmentURL = urls;
+        let sendEmailURL = urls;
+
+        // let maxminURL = "http://semmaxmin.40387376.qpc.hal.davecutting.uk/";
+        // let sortedURL = "http://semsort.40387376.qpc.hal.davecutting.uk/";
+        // let totalAttendanceURL = "http://semtotal.40387376.qpc.hal.davecutting.uk/";
+        // let engagementScoreURL = "http://semscore.40387376.qpc.hal.davecutting.uk/"
+        // let riskAssessmentURL = "http://semfailurerisk.40387376.qpc.hal.davecutting.uk/"
+        // let sendEmailURL = "https://europe-west2-civil-celerity-392019.cloudfunctions.net/send_email"
+
+
+        function displayTotal(total_attendance) {
+            document.getElementById('output-text').value = 'Total Attendance (in hours) = ' + total_attendance + ' hours';
+
+        }
+
+        function displayMaxMin(max_attendance, min_attendance) {
+            document.getElementById('output-text').value = 'Maximum attendance = ' + max_attendance + ' hours'
+                + '\nMinimum attendance = ' + min_attendance + ' hours';
+
+        }
+
+        function displaySortedAttendance(sorted_attendance) {
+            document.getElementById('output-text').value = sorted_attendance;
+
+        }
+
+        function displayEngagementScore(engagement_score) {
+            document.getElementById('output-text').value = `student's engagement score = ` + engagement_score;
+
+        }
+
+        function displayFailureRisk(failureRisk) {
+            document.getElementById('output-text').value = `This student is ` + failureRisk;
+
+        }
+        
+        // validate inputs for attendance
+        function validateAttendance(attendances) {
+            let attendance_1_max = 33;
+            let attendance_2_max = 22;
+            let attendance_3_max = 44;
+            let attendance_4_max = 55;
+            let attendance_max = [attendance_1_max, attendance_2_max, attendance_3_max, attendance_4_max];
+            for (let i=0; i<attendances.length; i++) {
+                if (attendances[i] > attendance_max[i] || attendances[i] < 0 || attendances[i] == "") {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // validate inputs for cut-off score
+        function validateCutOffScore(cutOff_score) {
+            if (cutOff_score > 100 || cutOff_score < 0 || cutOff_score == "") {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        // validate email address
+        function validateEmail(email) {
+            // regex for email validation
+            var re = /\S+@\S+\.\S+/;
+            return re.test(email);
+        }
+
+        async function sendPostRequest(url, payload, index) {
+            if (index >= url.length) {
+                console.log("None of the services working");
+                return {"message": "Services are not working at the moment. Please try again later."}
+            }
+            try {
+                const response = await fetch(url[index], {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                   return sendPostRequest(url, payload, index + 1)
+                }
+                return response.json();
+            } catch (error) {
+                console.log(error);
+                return sendPostRequest(url, payload, index + 1)
+            }
+        }
+
+        function clearText() {
+            document.getElementById('attendance_1').value = '';
+            document.getElementById('attendance_2').value = '';
+            document.getElementById('attendance_3').value = '';
+            document.getElementById('attendance_4').value = '';
+            document.getElementById('output-text').value = '';
+        }
+
+        async function getMaxMin() {
+            try {
+                let item_1 = document.getElementById('item_1').innerText
+                let item_2 = document.getElementById('item_2').innerText
+                let item_3 = document.getElementById('item_3').innerText
+                let item_4 = document.getElementById('item_4').innerText
+
+                let attendance_1 = document.getElementById('attendance_1').value
+                let attendance_2 = document.getElementById('attendance_2').value
+                let attendance_3 = document.getElementById('attendance_3').value
+                let attendance_4 = document.getElementById('attendance_4').value
+
+                if (!validateAttendance([attendance_1, attendance_2, attendance_3, attendance_4])) {
+                    alert("Please enter valid positive attendance hours. Maximum attendance hours for each item is given.");
+                    return;
+                }
+
+                let payload = {
+                    "action": "maxmin_attendance",
+                    "data": {
+                        "item_1": item_1,
+                        "attendance_1": attendance_1,
+                        "item_2": item_2,
+                        "attendance_2": attendance_2,
+                        "item_3": item_3,
+                        "attendance_3": attendance_3,
+                        "item_4": item_4,
+                        "attendance_4": attendance_4
+                    }
+                };
+                let response = await sendPostRequest(maxminURL, payload, 0)
+                if (response.error) {
+                    alert(response.message);
+                    return;
+                }
+                let max_attendance = response.max_item;
+                let min_attendance = response.min_item;
+                displayMaxMin(max_attendance, min_attendance);
+
+            } catch (err) {
+                console.log(err);
+            }
+        }
+
+        async function getSortedAttendance() {
+            let item_1 = document.getElementById('item_1').innerText
+            let item_2 = document.getElementById('item_2').innerText
+            let item_3 = document.getElementById('item_3').innerText
+            let item_4 = document.getElementById('item_4').innerText
+
+            let attendance_1 = document.getElementById('attendance_1').value
+            let attendance_2 = document.getElementById('attendance_2').value
+            let attendance_3 = document.getElementById('attendance_3').value
+            let attendance_4 = document.getElementById('attendance_4').value
+            
+            if (!validateAttendance([attendance_1, attendance_2, attendance_3, attendance_4])) {
+                alert("Please enter valid positive attendance hours. Maximum attendance hours for each item is given.");
+                return;
+            }
+
+            let payload = {
+                "action": "sort_attendance",
+                "data": {
+                    "item_1": item_1,
+                    "attendance_1": attendance_1,
+                    "item_2": item_2,
+                    "attendance_2": attendance_2,
+                    "item_3": item_3,
+                    "attendance_3": attendance_3,
+                    "item_4": item_4,
+                    "attendance_4": attendance_4
+                }
+            };
+            let response = await sendPostRequest(sortedURL, payload, 0);
+            if (response.error) {
+                alert(response.message);
+                return;
+            }
+            let sorted_attendance_returned = response.sorted_attendance;
+            let sorted_attendance = "";
+            for (let i = 0; i < sorted_attendance_returned.length; i++) {
+                sorted_attendance += sorted_attendance_returned[i]['item'] + ' - ' + sorted_attendance_returned[i]['attendance'] + ' hours' + '\r\n';
+            }
+            displaySortedAttendance(sorted_attendance);
+        }
+
+        async function getTotalAttendance() {
+            let lecture_attendance = document.getElementById('attendance_1').value
+            let lab_attendance = document.getElementById('attendance_2').value
+            let support_attendance = document.getElementById('attendance_3').value
+            let canvas_activity = document.getElementById('attendance_4').value
+            
+            if (!validateAttendance([lecture_attendance, lab_attendance, support_attendance, canvas_activity])) {
+                alert("Please enter valid positive attendance hours. Maximum attendance hours for each item is given.");
+                return;
+            }
+
+            let payload = {
+                "action": "total_attendance",
+                "data": {
+                    "lecture_attendance": lecture_attendance,
+                    "lab_attendance": lab_attendance,
+                    "support_attendance": support_attendance,
+                    "canvas_activity": canvas_activity
+                }
+            };
+            let response = await sendPostRequest(totalAttendanceURL, payload, 0);
+            if (response["status"] != "200") {
+                console.log(response["status"]);
+                alert(response["result"]);
+                return;
+            }
+            let total_attendance = response["result"]
+            displayTotal(total_attendance)
+        }
+
+        async function getEngagementScore() {
+            let lecture_attendance = document.getElementById('attendance_1').value
+            let lab_attendance = document.getElementById('attendance_2').value
+            let support_attendance = document.getElementById('attendance_3').value
+            let canvas_activity = document.getElementById('attendance_4').value
+            
+            if (!validateAttendance([lecture_attendance, lab_attendance, support_attendance, canvas_activity])) {
+                alert("Please enter valid positive attendance hours. Maximum attendance hours for each item is given.");
+                return;
+            }
+
+            let payload = {
+                "action": "engagement_score",
+                "data": {
+                    "lecture_attendance": lecture_attendance,
+                    "lab_attendance": lab_attendance,
+                    "support_attendance": support_attendance,
+                    "canvas_activity": canvas_activity
+                }
+            };
+            let response = await sendPostRequest(engagementScoreURL, payload, 0)
+            if (response["status"] != "200") {
+                console.log(response["status"]);
+                alert(response["result"]);
+                return;
+            }
+            let engagement_score = response["result"];
+            displayEngagementScore(engagement_score);
+        }
+
+        async function getRisk() {
+            let lecture_attendance = document.getElementById('attendance_1').value;
+            let lab_attendance = document.getElementById('attendance_2').value;
+            let support_attendance = document.getElementById('attendance_3').value;
+            let canvas_activity = document.getElementById('attendance_4').value;
+            let cutOff_score = document.getElementById('cut-off').value;
+
+            if (!validateAttendance([lecture_attendance, lab_attendance, support_attendance, canvas_activity])) {
+                alert("Please enter valid positive attendance hours. Maximum attendance hours for each item is given.");
+                return;
+            }
+
+            if (!validateCutOffScore(cutOff_score)) {
+                alert("Please enter valid cut-off score. Maximum cut-off score is 100.");
+                return;
+            }
+
+            let engagement_score;
+            let failureRisk;
+            let payload1 = {
+                "action": "engagement_score",
+                "data": {
+                    "lecture_attendance": lecture_attendance,
+                    "lab_attendance": lab_attendance,
+                    "support_attendance": support_attendance,
+                    "canvas_activity": canvas_activity
+                }
+            };
+            let response1 = await sendPostRequest(engagementScoreURL, payload1, 0);
+            if (response1["status"] != "200") {
+                console.log(response1["status"]);
+                alert(response1["result"]);
+                return;
+            }
+            engagement_score = response1["result"]
+            console.log(engagement_score);
+            let payload2 = {
+                "action": "risk_assessment",
+                "data": {
+                    "engagement_score": engagement_score,
+                    "cutOff_score": cutOff_score
+                }
+            }
+            let response2 = await sendPostRequest(riskAssessmentURL, payload2, 0);
+            failureRisk = response2["result"]
+            displayFailureRisk(failureRisk)
+            return failureRisk
+        }
+
+        async function sendEmail() {
+            try {
+                const risk = await getRisk();
+                console.log(risk);
+
+                if (risk == "Risky") {
+                    var email = prompt("Enter email address:");
+                    // check user cancelled the prompt
+                    if (email == null) {
+                        return;
+                    }
+                    // check if email is valid
+                    if (email === "" || !validateEmail(email)) {
+                        alert("Please enter a valid email address");
+                        return;
+                    }
+                    let payload = {
+                        "action": "send_email",
+                        "data": {
+                            "email": email
+                        }
+                    };
+                    let response = await sendPostRequest(sendEmailURL, payload, 0)
+                    console.log(response["message"]);
+                    alert(response["message"])
+                } else {
+                    alert("Please check the student's engagement score first");
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+
+    </script>
+
+    <style type="text/css">
+        body {
+            font-size: 150%;
+            font-family: monospace;
+        }
+
+        label {
+            display: inline-block;
+            width: 150px;
+            text-align: left;
+        }
+
+        #logo {
+            font-family: Calibri, sans-serif;
+            font-weight: lighter;
+            color: #505050;
+            margin: 0.5em;
+        }
+
+        #sem {
+            text-align: center;
+            margin-top: 1em;
+        }
+
+        #input-div-1 {
+            text-align: center;
+            margin-top: 1em;
+            background-color: #d5d8dc;
+        }
+
+        #input-div-2 {
+            text-align: center;
+            background-color: #abb2b9;
+        }
+
+        #output-div {
+            text-align: center;
+            background-color: #808b96;
+        }
+
+        .display-item {
+            font-size: 90%;
+            color: black;
+            font-family: monospace;
+            background-color: white;
+            padding: 0.2em;
+            margin: 0.2em;
+            letter-spacing: 0.1em;
+            width: 380px;
+            text-align: left;
+        }
+
+        .display-attendance {
+            font-size: 90%;
+            color: black;
+            background-color: white;
+            padding: 0.2em;
+            margin: 0.2em;
+            font-family: monospace;
+            letter-spacing: 0.1em;
+            width: 40px;
+        }
+
+        .display-output {
+            font-size: 90%;
+            color: black;
+            background-color: white;
+            padding: 0.2em;
+            margin: 0.2em;
+            font-family: monospace;
+            letter-spacing: 0.1em;
+            width: 600px;
+
+        }
+
+        .sembutton-active {
+            background-color: #2874a6;
+            color: white;
+            padding: 0px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 18px;
+            margin: 4px 2px;
+            cursor: pointer;
+            height: 50px;
+            width: 400px;
+        }
+
+        .sembutton-inactive {
+            background-color: gray;
+            color: white;
+            padding: 0px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 18px;
+            margin: 4px 2px;
+            cursor: pointer;
+            height: 50px;
+            width: 400px;
+        }
+
+        .sembutton-clear {
+            background-color: #c0392b;
+            color: white;
+            padding: 0px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 18px;
+            margin: 4px 2px;
+            cursor: pointer;
+            height: 40px;
+            width: 400px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="sem">
+        <div id="logo">
+            Student Engaggement Monitoring
+        </div>
+        <div id="input-div-1">
+            <div>
+                <label class="display-item" id="item_1">Lecture sessions</label>
+                <input class="display-attendance" type="number" id="attendance_1" name="attendance_1"
+                    placeholder="00" max="33"><label>/33 (hours)</label>
+            </div>
+            <div>
+                <label class="display-item" id="item_2">Lab sessions</label>
+                <input class="display-attendance" type="number" id="attendance_2" name="attendance_2"
+                    placeholder="00" max="22"><label>/22 (hours)</label>
+            </div>
+            <div>
+                <label class="display-item" id="item_3">Support sessions</label>
+                <input class="display-attendance" type="number" id="attendance_3" name="attendance_3"
+                    placeholder="00" max="44"><label>/44 (hours)</label>
+            </div>
+            <div>
+                <label class="display-item" id="item_4">Canvas activities</label>
+                <input class="display-attendance" type="number" id="attendance_4" name="attendance_4"
+                    placeholder="00" max="55"><label>/55 (hours)</label>
+            </div>
+        </div>
+        <div id="input-div-2">
+            <label class="display-item" id="cutoff">Cut-off Engaggement Score</label>
+            <input class="display-attendance" type="number" id="cut-off" name="cut-off" placeholder="00" max="100"><label>/100
+                (%)</label>
+        </div>
+        <div id="output-div">
+            <textarea class="display-output" id="output-text" rows="5" cols="35" readonly=1
+                placeholder="Results here..." value="">
+        </textarea>
+        </div>
+        <div>
+            <button class="sembutton-active" onclick="getMaxMin();">Maximum and Minimum Attendance</button>
+        </div>
+        <div>
+            <button class="sembutton-active" onclick="getSortedAttendance();">Sort Attendance</button>
+        </div>
+        <div>
+            <button class="sembutton-active" onclick="getTotalAttendance();">Total Attendance Hours</button>
+        </div>
+        <div>
+            <button class="sembutton-active" onclick="getEngagementScore();">Student Engagement Score</button>
+        </div>
+        <div>
+            <button class="sembutton-active" onclick="getRisk();">Risk of Student Failure</button>
+        </div>
+        <div>
+            <button class="sembutton-active" onclick="sendEmail();">Email Risky Students</button>
+        </div>
+        <div>
+            <button class="sembutton-clear" onclick="clearText();">Clear</button>
+        </div>
+
+    </div>
+</body>
+
+<script type="text/javascript">
+</script>
+
+</html>
